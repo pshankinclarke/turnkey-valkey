@@ -1,0 +1,5 @@
+Landing page: https://$ipaddr
+Redis instance: redis://$ipaddr:6379
+Redis-commander: https://$ipaddr/redis-commander
+Webmin:       https://$ipaddr:12321
+SSH/SFTP:     root@$ipaddr (port 22)
