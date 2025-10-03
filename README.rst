@@ -1,51 +1,35 @@
-Redis - Open Source, In-memory Data Structure Store
-===================================================
+Valkey — open-source, high-performance data store
+=================================================
 
-`Redis`_ can be used as a database, cache or message broker. It supports data
-structures such as strings, hashes, lists, sets, sorted sets
-with range queries, bitmaps, hyperloglogs and geospatial indexes
-with radius queries. Redis has built-in replication, Lua scripting,
-LRU eviction, transactions and different levels of on-disk persistence,
-and provides high availability via `Redis Sentinel`_ (requires install of
-Debian `redis-sentinel`_ package) and automatic partitioning with
-`Redis Cluster`_.
+This TurnKey appliance bundles Valkey (an open, community-driven, in-memory data store) together with
+a simple web UI (Redis Commander) served behind  Nginx over HTTPS.
 
-This appliance includes all the standard features in `TurnKey Core`_,
-and on top of that:
+Based on the TurnKey Redis appliance, it switches the server to Valkey while keeping Redis Commander
+for browsing, inspecting, and basic key management.
 
-- Redis configurations:
+Included
+--------
+- Valkey server (from Debian bookworm-backports)
+- Redis Commander (via Node.js, behind Nginx on :443)
+- Nginx reverse proxy (TLS with self-signed cert)
+- TurnKey control panel integration (pm2, Confconsole, Webmin)
 
-    - Installed from debian package repository (auto security updates).
-    - Includes web based management tool `Redis Commander`_.
-    - Complex Redis system password auto-generated on firstboot (security).
-    - Confconsole plugin provided to view Redis system password (convenience).
+Access
+------
+- Valkey: TCP 6379 (binds to 127.0.0.1 by default; protected-mode configurable).  
+  A password is generated at first boot and written to `/etc/valkey/valkey.conf` (`requirepass`);
+  the same password is applied to Redis Commander’s Valkey connection.
+- Redis Commander: `https://<ip-or-host>/redis-commander`  
+  HTTP auth user is **admin**; you set its password during first boot.
+- Webmin: `https://<ip-or-host>:12321` (login user **root**)
+ 
+Credentials
+-----------
+- Webmin, SSH: username root
+- Redis Commander: username admin
 
-   **Security note**: Updates to `Redis Commander`_ may require supervision so
-   they **ARE NOT** configured to install automatically. See `Plone
-   documentation`_ for upgrading.
-
-- SSL support out of the box.
-- Postfix MTA (bound to localhost) to allow sending of email from web
-  applications (e.g., password recovery).
-
-Supervised Manual Redis Commander Update
-----------------------------------------
-
-Always ensure that you have a current and tested backup before performing an
-upgrade. Ideally also do a test upgrade proceedure on a development server,
-before updating your production server.::
-
-    su - node -c "cd /opt/tklweb-cp && npm update"
-
-Credentials *(passwords set at first boot)*
--------------------------------------------
-
-- Webmin, SSH: username **root**
-- Redis-commander: username **admin**
-
-.. _Redis: https://redis.io/
-.. _Redis Sentinel: https://redis.io/topics/sentinel
-.. _redis-sentinel: https://packages.debian.org/stretch/redis-sentinel
-.. _Redis Cluster: https://redis.io/topics/cluster-tutorial
-.. _TurnKey Core: https://www.turnkeylinux.org/core
-.. _Redis Commander: https://joeferner.github.io/redis-commander/
+References
+----------
+- TurnKey Redis appliance: https://www.turnkeylinux.org/redis
+- Valkey project: https://valkey.io/
+- Valkey documentation: https://valkey.io/docs/
