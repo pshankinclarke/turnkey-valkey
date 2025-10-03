@@ -1,6 +1,6 @@
 module.exports = {
   apps : [{
-    name: "Redis-commander",
+    name: "Valkey Admin (Redis-commander)",
     script: "/opt/tklweb-cp/node_modules/redis-commander/bin/redis-commander.js",
     args: "--address 127.0.0.1 --port 8082 --redis-user=default --redis-password='turnkey1'",
     env: {

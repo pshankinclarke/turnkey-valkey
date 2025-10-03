@@ -15,5 +15,5 @@ if [[ -n "$APP_PASS" ]]; then
     fi
 fi
 
-$INITHOOKS_PATH/bin/redis.py --pass="$APP_PASS" \
+$INITHOOKS_PATH/bin/valkey.py --pass="$APP_PASS" \
     --bind="$APP_IP_BIND" --protected_mode="$APP_PROTECTED"

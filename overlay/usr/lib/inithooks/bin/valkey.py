@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-"""Set Redis-commander password and Redis bind and protected-mode
+"""Set Redis-commander password and Valkey bind and protected-mode
 directives.
 
 Option:
@@ -58,15 +58,15 @@ def main():
     if not bind:
         d = Dialog('TurnKey Linux - First boot configuration')
         bind = d.menu(
-            "Interface(s) for Redis to bind to",
-            ("Inteface for Redis to bind to?\n\nIf you wish to securely"
+            "Interface(s) for Valkey to bind to",
+            ("Inteface for Valkey to bind to?\n\nIf you wish to securely"
              " allow remote connections using 'all', ensure the system"
              " firewall is enabled & block all traffic on port 6379,"
              " except for the desired remote IP(s).\n\nManually edit the"
              " config file to set a custom interface."),
             choices=(
-                ("localhost", "Redis will not respond to remote computer"),
-                ("all", "Redis will allow all connections"),
+                ("localhost", "Valkey will not respond to remote computer"),
+                ("all", "Valkey will allow all connections"),
                 ("local", "Enter custom range")))
     if bind == "all":
         bind_ip = "0.0.0.0"
@@ -81,15 +81,15 @@ def main():
         d = Dialog('TurnKey Linux - First boot configuration')
         protected_mode = d.yesno(
                 'Keep protected-mode enabled?',
-                "In protected  mode Redis only replies to queries from"
+                "In protected  mode Valkey only replies to queries from"
                 " localhost. Clients connecting from other addresses will"
-                " receive an error, noting why & how to configure Redis.\n"
+                " receive an error, noting why & how to configure Valkey.\n"
                 "\nUnless you set really good password, this is recommended",
                 'Yes', 'No')
 
     protected_mode_str = {True: "yes", False: "no", "1": "yes", "0": "no"}
     protected_mode = protected_mode_str[protected_mode]
-    conf = "/etc/redis/redis.conf"
+    conf = "/etc/valkey/valkey.conf"
     redis_commander_conf = "/opt/tklweb-cp/ecosystem.config.js"
     subprocess.run(["sed", "-i", f"s|^bind .*|bind {bind_ip}|", conf])
     subprocess.run([
@@ -101,11 +101,11 @@ def main():
         f"s|HTTP_PASSWORD\": \".*\"|HTTP_PASSWORD\": \"{password}\"|",
         redis_commander_conf])
 
-    # restart redis and redis commander if running so change takes effect
+    # restart valkey and redis commander if running so change takes effect
     try:
         subprocess.run(["systemctl", "is-active",
-                        "--quiet", "redis-server.service"])
-        subprocess.run(["service", "redis-server", "restart"])
+                        "--quiet", "valkey-server.service"])
+        subprocess.run(["service", "valkey-server", "restart"])
     except ExecError:
         pass
 

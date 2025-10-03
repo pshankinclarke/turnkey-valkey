@@ -1,0 +1,9 @@
+#!/bin/bash
+set -euo pipefail
+export DEBIAN_FRONTEND=noninteractive
+install -d -m 0755 /etc/apt/sources.list.d
+cat >/etc/apt/sources.list.d/backports.list <<'EOT'
+deb http://deb.debian.org/debian bookworm-backports main
+EOT
+apt-get update -y
+apt-get install -y -t bookworm-backports valkey-server

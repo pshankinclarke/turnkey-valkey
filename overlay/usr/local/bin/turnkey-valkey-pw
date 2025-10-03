@@ -1,0 +1,41 @@
+#!/bin/bash
+# Turnkey Valkey Password
+# to set and get a password for Valkey
+
+VALKEY_CONF=/etc/valkey/valkey.conf
+
+CMD=$1
+PWORD=$2
+
+function usage() {
+    echo -e "Usage: turnkey-valkey-pw get\nUsage: turnkey-valkey-pw set <password>" 1>&2
+    echo -e "Warning: If manually setting a valkey password, ensure that it is a REALLY good one!"
+    exit 1
+}
+function get_pword() {
+    sed -n 's|^\s*requirepass\s*||p' "$VALKEY_CONF"
+}
+function set_pword() {
+    pword="$1"
+    old_pword="$(get_pword)"
+    if [[ -z "$old_pword" ]]; then
+        echo "requirepass $pword" >> "$VALKEY_CONF"
+    else
+        sed -i "s|^\\s*requirepass.*|requirepass $pword|g" "$VALKEY_CONF"
+    fi
+}
+
+if [[ -z "$CMD" ]]; then
+    usage
+fi
+
+if [[ "$CMD" == "get" ]]; then
+    get_pword
+elif [[ "$CMD" == "set" ]]; then
+    if [[ -z "$PWORD" ]]; then
+        usage
+    fi
+    set_pword "$PWORD"
+else 
+    usage
+fi

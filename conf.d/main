@@ -12,4 +12,4 @@ su -lc "[[ "$FAB_HTTP_PROXY" ]] && export http_proxy=$FAB_HTTP_PROXY; cd /opt/tk
 echo {} > /opt/tklweb-cp/node_modules/redis-commander/config/local-production.json
 
 rm /etc/nginx/sites-enabled/tkl-default
-ln -s /etc/nginx/sites-available/redis /etc/nginx/sites-enabled/redis
+ln -s /etc/nginx/sites-available/valkey /etc/nginx/sites-enabled/valkey

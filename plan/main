@@ -1,4 +1,2 @@
 #include <turnkey/base>
 #include <turnkey/nodejs-nginx>
-
-redis-server
