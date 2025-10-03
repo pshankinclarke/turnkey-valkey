@@ -17,10 +17,10 @@ Included
 Access
 ------
 - Valkey: TCP 6379 (binds to 127.0.0.1 by default; protected-mode configurable).  
-  A password is generated at first boot and written to `/etc/valkey/valkey.conf` (`requirepass`);
+  A database password is generated at first boot and written to `/etc/valkey/valkey.conf` (`requirepass`);
   the same password is applied to Redis Commander’s Valkey connection.
-- Redis Commander: `https://<ip-or-host>/redis-commander`  
-  HTTP auth user is **admin**; you set its password during first boot.
+- Redis Commander (web UI): `https://<ip-or-host>/redis-commander`  
+  HTTP auth user is **admin**; you set the UI password during first boot (seperate from the Valkey DB password).
 - Webmin: `https://<ip-or-host>:12321` (login user **root**)
  
 Credentials
