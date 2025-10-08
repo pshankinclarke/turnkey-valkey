@@ -1,3 +1,14 @@
+turnkey-valkey-19.0 (1) turnkey; urgency=medium
+
+  * Port base to Debian 13 (Trixie) for TurnKey v19.
+  * Install valkey-server from Trixie via plan/main; remove Bookworm backports script.
+  * Security: Trixie currently ships valkey-server 8.1.1+dfsg1-3, which predates upstream
+    Lua CVE fixes (CVE-2025-49844, -46817, -46818, -46819). Upgrade once
+    Trixie publishes a fixed package; if v19 releases first, a temporary
+    upstream build may be used in the interim.
+
+ -- Parker Shankin-Clarke <parkerwsc1@gmail.com>  Tue, 07 Oct 2025 00:00:00 +0000
+
 turnkey-valkey-18.1 (1) turnkey; urgency=low
 
   * Initial Valkey appliance based on TurnKey Redis app.
