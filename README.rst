@@ -34,20 +34,6 @@ References
 - Valkey project: https://valkey.io/
 - Valkey documentation: https://valkey.io/docs/
 
-Security status (as of 2025-10-07)
-----------------------------------
-Debian Trixie currently provides `valkey-server 8.1.1+dfsg1-3`_ (source upload `2025-07-09`_).
-Upstream fixed the recent Lua-related CVEs (CVE-2025-49844, CVE-2025-46817,
-CVE-2025-46818, CVE-2025-46819) in versions `8.1.4`_ and `8.0.6`_ on 2025-10-03,
-so ``8.1.1+dfsg1-3`` predates those fixes.
-
-This appliance will pick up the fix as soon as Trixie publishes
-an updated ``valkey-server`` package. If v19 ships before Trixie updates, it will
-temporarily run an upstream Valkey binary, then revert to Debian once patched. Track the status on the `Debian security tracker`_.
-
-.. _valkey-server 8.1.1+dfsg1-3: https://packages.debian.org/trixie/amd64/valkey-server
-.. _2025-07-09: https://metadata.ftp-master.debian.org/changelogs//main/v/valkey/valkey_8.1.1%2Bdfsg1-3_changelog
-.. _8.1.4: https://valkey.io/download/releases/v8-1-4/
-.. _8.0.6: https://valkey.io/download/releases/v8-0-6/
-.. _Debian security tracker: https://security-tracker.debian.org/tracker/source-package/valkey
-
+Security notes
+--------------
+This appliance inherits security updates for Valkey from Debian. Track issues via the Debian security tracker (valkey): https://security-tracker.debian.org/tracker/source-package/valkey
