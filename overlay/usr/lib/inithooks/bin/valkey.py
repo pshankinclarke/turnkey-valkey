@@ -8,13 +8,13 @@ Option:
     --pass=             unless provided, will ask interactively.
                             WARNING: set good password if unprotected!
     --protected_mode=   unless provided, will ask interactively.
-                            [yes|no]
+                            [1|0]
 """
 
 import sys
 import getopt
-import hashlib
 import subprocess
+import os
 
 from netinfo import get_ifnames, InterfaceInfo
 from libinithooks.dialog_wrapper import Dialog
@@ -59,7 +59,7 @@ def main():
         d = Dialog('TurnKey Linux - First boot configuration')
         bind = d.menu(
             "Interface(s) for Valkey to bind to",
-            ("Inteface for Valkey to bind to?\n\nIf you wish to securely"
+            ("Interface for Valkey to bind to?\n\nIf you wish to securely"
              " allow remote connections using 'all', ensure the system"
              " firewall is enabled & block all traffic on port 6379,"
              " except for the desired remote IP(s).\n\nManually edit the"
@@ -70,10 +70,10 @@ def main():
                 ("local", "Enter custom range")))
     if bind == "all":
         bind_ip = "0.0.0.0"
-    if bind == "local":
+    elif bind == "local":
         localaddr = InterfaceInfo(get_ifnames()[0]).address
         d = Dialog('TurnKey Linux - First boot configuration')
-        bind_ip = d.get_input("Bind IP Range", "Enter bind ip range", localaddr)    
+        bind_ip = d.get_input("Bind IP Range", "Enter bind ip range", localaddr)
     else:
         bind_ip = "127.0.0.1"
 
@@ -102,26 +102,24 @@ def main():
         redis_commander_conf])
 
     # restart valkey and redis commander if running so change takes effect
-    try:
-        subprocess.run(["systemctl", "is-active",
-                        "--quiet", "valkey-server.service"])
+    if subprocess.run(["systemctl", "is-active",
+                       "--quiet", "valkey-server.service"]).returncode == 0:
         subprocess.run(["service", "valkey-server", "restart"])
-    except ExecError:
-        pass
 
     # reload and restart pm2 so changes take affect
     # and save them to /home/node/.pm2/dump.pm2
-    try:
-        subprocess.run(["systemctl", "is-active",
-                        "--quiet", "pm2-node.service"])
-        subprocess.run(["systemctl", "reload",
-                        "pm2-node.service"])
-#        subprocess.run(["rm", "/home/node/.pm2/dump.pm2"])
-        subprocess.run(["pm2", "reload", "/opt/tklweb-cp/ecosystem.config.js"],env={"PM2_HOME": "/home/node/.pm2", "PATH": "/usr/local/bin"}, check=True, user="node")
-        subprocess.run(["pm2", "save"],env={"PM2_HOME": "/home/node/.pm2", "PATH": "/usr/local/bin"}, check=True, user="node")
-        subprocess.run(["service", "pm2-node", "restart"])
-    except ExecError:
-        pass
+    if subprocess.run(["systemctl", "is-active",
+                       "--quiet", "pm2-node.service"]).returncode == 0:
+        env = os.environ.copy()
+        env["PM2_HOME"] = "/home/node/.pm2"
+        env["PATH"] = "/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"
+        try:
+            subprocess.run(["systemctl", "reload","pm2-node.service"])
+            subprocess.run(["su", "-s","/bin/sh", "-c", "pm2 reload /opt/tklweb-cp/ecosystem.config.js", "node"], check=True, env=env)
+            subprocess.run(["su", "-s","/bin/sh", "-c", "pm2 save", "node"], check=True, env=env)
+            subprocess.run(["service", "pm2-node", "restart"])
+        except:
+            pass
 
 
 if __name__ == "__main__":
