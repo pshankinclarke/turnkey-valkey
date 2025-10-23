@@ -18,7 +18,7 @@ debfile=("$TMP"/valkey-server_"$VER"_*.deb)
 [ -f "${debfile[0]}" ] || { echo "No valkey-server .deb in $TMP"; exit 1; }
 
 DEBDIR="$(mktemp -d /tmp/valkey-deb.XXXXXX)"
-trap 'rm -rf -- "$DEBDIR" "$debfile"' EXIT
+trap 'set +e; cd /; rm -rf -- "$DEBDIR" "$debfile"' EXIT
 dpkg-deb -x "$debfile" "$DEBDIR"
 
 # install systemd units
