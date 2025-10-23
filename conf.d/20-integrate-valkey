@@ -1,0 +1,58 @@
+#!/bin/bash
+set -euo pipefail
+umask 022
+export DEBIAN_FRONTEND=noninteractive
+
+TMP=/tmp/valkey-build
+install -d -m 755 "$TMP"
+
+# use backports files
+mv /etc/apt/sources.list.d/debian-backports.list{.disabled,} 2>/dev/null || :
+apt-get update -y
+
+# pull Debian's valkey-server package artifacts (units, config) from backports
+VER="8.0.1+dfsg1-1~bpo12+1"
+( cd "$TMP" && apt-get -q=2 -t bookworm-backports download "valkey-server=$VER" )
+
+debfile=("$TMP"/valkey-server_"$VER"_*.deb)
+[ -f "${debfile[0]}" ] || { echo "No valkey-server .deb in $TMP"; exit 1; }
+
+DEBDIR="$(mktemp -d /tmp/valkey-deb.XXXXXX)"
+trap 'rm -rf -- "$DEBDIR" "$debfile"' EXIT
+dpkg-deb -x "$debfile" "$DEBDIR"
+
+# install systemd units
+install -d -m 0755 /lib/systemd/system
+install -m 0644 "$DEBDIR"/lib/systemd/system/valkey-server.service  /lib/systemd/system/valkey-server.service
+install -m 0644 "$DEBDIR"/lib/systemd/system/valkey-server@.service /lib/systemd/system/valkey-server@.service || true
+
+# seed config if missing
+if [ ! -f /etc/valkey/valkey.conf ]; then
+  install -D -m 0640 -o valkey -g valkey "$DEBDIR"/etc/valkey/valkey.conf /etc/valkey/valkey.conf
+fi
+
+upsert_conf() {
+  local key="$1" val="$2" file="/etc/valkey/valkey.conf"
+  [ -f "$file" ] || return 0
+  local tmp; tmp="$(mktemp)"
+  sed -E "/^[[:space:]]*(#[[:space:]]*)?${key}([[:space:]]|$)/d" "$file" >"$tmp"
+  printf '%s %s\n' "$key" "$val" >>"$tmp"
+  cat "$tmp" >"$file"; rm -f "$tmp"
+  chown valkey:valkey "$file"; chmod 0640 "$file"
+}
+
+upsert_conf supervised systemd
+upsert_conf dir /var/lib/valkey
+upsert_conf daemonize no
+upsert_conf logfile '""'
+
+# allow starts on first boot
+if [ -d /run/systemd/system ]; then
+  systemctl daemon-reload || true
+  systemctl enable valkey-server || true
+fi
+rm -f /usr/sbin/policy-rc.d
+
+# cleanup
+mv /etc/apt/sources.list.d/debian-backports.list /etc/apt/sources.list.d/debian-backports.list.disabled 2>/dev/null || true
+rm -f /etc/apt/sources.list.d/backports.list

@@ -1,0 +1,68 @@
+#!/bin/bash
+set -euo pipefail
+umask 022
+export DEBIAN_FRONTEND=noninteractive
+
+VALKEY_VER="${VALKEY_VER:-8.0.6}"
+TMP="$(mktemp -d /tmp/valkey-build.XXXXXX)"
+
+# prevent service starts during the build (removed in 20-*)
+echo exit 101 > /usr/sbin/policy-rc.d
+chmod +x /usr/sbin/policy-rc.d
+
+apt-get update -y
+
+# toolchain & build deps (based on bookworm/backports)
+apt-get install -y --no-install-recommends \
+  build-essential pkg-config dpkg-dev libssl-dev libsystemd-dev libjemalloc-dev liblzf-dev \
+  ca-certificates debian-archive-keyring curl
+
+# runtime deps (marked manual so not dropped later)
+apt-get install -y --no-install-recommends libssl3 libsystemd0 libjemalloc2 liblzf1 libatomic1
+apt-mark manual libssl3 libsystemd0 libjemalloc2 liblzf1 libatomic1
+
+# build dir
+trap 'set +e; cd /; rm -rf -- "$TMP"' EXIT
+install -d -m 700 "$TMP/src"
+
+# fetch upstream tarball
+TARBALL_URL="https://github.com/valkey-io/valkey/archive/refs/tags/${VALKEY_VER}.tar.gz"
+curl -fsSL --retry 3 --retry-connrefused -o "$TMP/valkey.tar.gz" "$TARBALL_URL"
+
+tar -xzf "$TMP/valkey.tar.gz" --strip-components=1 -C "$TMP/src"
+rm -f "$TMP/valkey.tar.gz"
+cd "$TMP/src"
+
+# hardening with dpkg-buildflags
+export DEB_BUILD_MAINT_OPTIONS="hardening=+all"
+eval "$(dpkg-buildflags --export=sh)"
+
+# build flags
+export DEB_CFLAGS_MAINT_APPEND="-I/usr/include/liblzf"
+export DEB_LDFLAGS_MAINT_APPEND="-Wl,-no-as-needed -ldl -latomic -llzf"
+eval "$(dpkg-buildflags --export=sh)"
+export CFLAGS CPPFLAGS LDFLAGS
+
+# build & install
+make -j"$(nproc)" V=1 \
+  BUILD_TLS=yes \
+  USE_SYSTEMD=yes \
+  USE_JEMALLOC=yes \
+  USE_SYSTEM_JEMALLOC=yes
+make PREFIX=/usr install
+
+# system users & dirs
+id -u valkey &>/dev/null || \
+  adduser --system --quiet --home /var/lib/valkey --group --shell /usr/sbin/nologin valkey
+
+install -d -m 0750 -o valkey -g valkey /var/lib/valkey
+install -d -m 2750 -o valkey -g adm    /var/log/valkey
+install -d -m 2770 -o root   -g valkey /etc/valkey
+chown valkey:valkey /var/lib/valkey
+
+valkey-server --version || true
+
+# cleanup (keep runtimes)
+apt-get purge -y build-essential pkg-config libssl-dev libsystemd-dev libjemalloc-dev liblzf-dev || true
+apt-get autoremove -y --purge || true
+apt-get clean
