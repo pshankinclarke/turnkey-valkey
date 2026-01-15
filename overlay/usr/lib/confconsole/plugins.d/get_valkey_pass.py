@@ -8,6 +8,7 @@ TITLE = "Check valkey password"
 
 
 def run():
+    # Note: 'console' is provided by the confconsole plugin framework at runtime
     try:
         requirepass_out = subprocess.check_output(['turnkey-valkey-pw', 'get'], 
                                                    timeout=5).decode().strip()

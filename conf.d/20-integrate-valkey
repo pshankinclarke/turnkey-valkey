@@ -16,7 +16,7 @@ VER="8.0.1+dfsg1-1~bpo12+1"
 
 # Use glob directly - no need for array
 debfile=$TMP/valkey-server_${VER}_*.deb
-[ -f $debfile ] || { echo "No valkey-server .deb in $TMP"; exit 1; }
+[ -f "$debfile" ] || { echo "No valkey-server .deb in $TMP"; exit 1; }
 
 DEBDIR="$(mktemp -d /tmp/valkey-deb.XXXXXX)"
 trap 'set +e; cd /; rm -rf -- "$DEBDIR" "$debfile"' EXIT
