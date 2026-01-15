@@ -13,7 +13,7 @@ function usage() {
     exit 1
 }
 function get_pword() {
-    sed -n 's|^\s*requirepass\s*||p' "$VALKEY_CONF"
+    sed -n 's|^[[:space:]]*requirepass[[:space:]]*||p' "$VALKEY_CONF"
 }
 function set_pword() {
     pword="$1"
@@ -21,7 +21,7 @@ function set_pword() {
     if [[ -z "$old_pword" ]]; then
         echo "requirepass $pword" >> "$VALKEY_CONF"
     else
-        sed -i "s|^\\s*requirepass.*|requirepass $pword|g" "$VALKEY_CONF"
+        sed -i "s|^[[:space:]]*requirepass.*|requirepass $pword|g" "$VALKEY_CONF"
     fi
 }
 

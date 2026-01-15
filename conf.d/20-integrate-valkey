@@ -14,8 +14,9 @@ apt-get update -y
 VER="8.0.1+dfsg1-1~bpo12+1"
 ( cd "$TMP" && apt-get -q=2 -t bookworm-backports download "valkey-server=$VER" )
 
-debfile=("$TMP"/valkey-server_"$VER"_*.deb)
-[ -f "${debfile[0]}" ] || { echo "No valkey-server .deb in $TMP"; exit 1; }
+# Use glob directly - no need for array
+debfile=$TMP/valkey-server_${VER}_*.deb
+[ -f "$debfile" ] || { echo "No valkey-server .deb in $TMP"; exit 1; }
 
 DEBDIR="$(mktemp -d /tmp/valkey-deb.XXXXXX)"
 trap 'set +e; cd /; rm -rf -- "$DEBDIR" "$debfile"' EXIT
@@ -31,13 +32,14 @@ if [ ! -f /etc/valkey/valkey.conf ]; then
   install -D -m 0640 -o valkey -g valkey "$DEBDIR"/etc/valkey/valkey.conf /etc/valkey/valkey.conf
 fi
 
+# Optimized config updates - use in-place sed instead of temp files
 upsert_conf() {
   local key="$1" val="$2" file="/etc/valkey/valkey.conf"
   [ -f "$file" ] || return 0
-  local tmp; tmp="$(mktemp)"
-  sed -E "/^[[:space:]]*(#[[:space:]]*)?${key}([[:space:]]|$)/d" "$file" >"$tmp"
-  printf '%s %s\n' "$key" "$val" >>"$tmp"
-  cat "$tmp" >"$file"; rm -f "$tmp"
+  # Remove existing lines (commented or not) with the key
+  sed -i -E "/^[[:space:]]*(#[[:space:]]*)?${key}([[:space:]]|$)/d" "$file"
+  # Append the new setting
+  printf '%s %s\n' "$key" "$val" >>"$file"
   chown valkey:valkey "$file"; chmod 0640 "$file"
 }
 
