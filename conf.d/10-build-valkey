@@ -35,9 +35,6 @@ cd "$TMP/src"
 
 # hardening with dpkg-buildflags
 export DEB_BUILD_MAINT_OPTIONS="hardening=+all"
-eval "$(dpkg-buildflags --export=sh)"
-
-# build flags
 export DEB_CFLAGS_MAINT_APPEND="-I/usr/include/liblzf"
 export DEB_LDFLAGS_MAINT_APPEND="-Wl,-no-as-needed -ldl -latomic -llzf"
 eval "$(dpkg-buildflags --export=sh)"

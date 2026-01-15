@@ -49,14 +49,15 @@ def main():
         elif opt == '--protected_mode':
             protected_mode = val
 
+    # Create Dialog instance once for reuse
+    d = Dialog('TurnKey Linux - First boot configuration')
+
     if not password:
-        d = Dialog('TurnKey Linux - First boot configuration')
         password = d.get_password(
              "Redis-commander 'admin' password",
              "Enter password for 'admin' access to redis-commander UI")
 
     if not bind:
-        d = Dialog('TurnKey Linux - First boot configuration')
         bind = d.menu(
             "Interface(s) for Valkey to bind to",
             ("Interface for Valkey to bind to?\n\nIf you wish to securely"
@@ -72,13 +73,11 @@ def main():
         bind_ip = "0.0.0.0"
     elif bind == "local":
         localaddr = InterfaceInfo(get_ifnames()[0]).address
-        d = Dialog('TurnKey Linux - First boot configuration')
         bind_ip = d.get_input("Bind IP Range", "Enter bind ip range", localaddr)
     else:
         bind_ip = "127.0.0.1"
 
     if not protected_mode:
-        d = Dialog('TurnKey Linux - First boot configuration')
         protected_mode = d.yesno(
                 'Keep protected-mode enabled?',
                 "In protected  mode Valkey only replies to queries from"
@@ -91,34 +90,49 @@ def main():
     protected_mode = protected_mode_str[protected_mode]
     conf = "/etc/valkey/valkey.conf"
     redis_commander_conf = "/opt/tklweb-cp/ecosystem.config.js"
-    subprocess.run(["sed", "-i", f"s|^bind .*|bind {bind_ip}|", conf])
-    subprocess.run([
-        "sed", "-i",
-        f"s|^protected-mode .*|protected-mode {protected_mode}|",
-        conf])
-    subprocess.run([
-        "sed", "-i",
-        f"s|HTTP_PASSWORD\": \".*\"|HTTP_PASSWORD\": \"{password}\"|",
-        redis_commander_conf])
+    
+    # Update valkey.conf using Python file I/O instead of subprocess sed calls
+    import re
+    with open(conf, 'r') as f:
+        conf_content = f.read()
+    
+    conf_content = re.sub(r'^bind .*', f'bind {bind_ip}', conf_content, flags=re.MULTILINE)
+    conf_content = re.sub(r'^protected-mode .*', f'protected-mode {protected_mode}', conf_content, flags=re.MULTILINE)
+    
+    with open(conf, 'w') as f:
+        f.write(conf_content)
+    
+    # Update redis-commander config using Python file I/O
+    with open(redis_commander_conf, 'r') as f:
+        rc_content = f.read()
+    
+    rc_content = re.sub(r'HTTP_PASSWORD": ".*?"', f'HTTP_PASSWORD": "{password}"', rc_content)
+    
+    with open(redis_commander_conf, 'w') as f:
+        f.write(rc_content)
 
     # restart valkey and redis commander if running so change takes effect
-    if subprocess.run(["systemctl", "is-active",
-                       "--quiet", "valkey-server.service"]).returncode == 0:
-        subprocess.run(["service", "valkey-server", "restart"])
+    if subprocess.run(["systemctl", "is-active", "--quiet", "valkey-server.service"],
+                      timeout=5).returncode == 0:
+        subprocess.run(["service", "valkey-server", "restart"], timeout=30)
 
     # reload and restart pm2 so changes take affect
     # and save them to /home/node/.pm2/dump.pm2
-    if subprocess.run(["systemctl", "is-active",
-                       "--quiet", "pm2-node.service"]).returncode == 0:
+    if subprocess.run(["systemctl", "is-active", "--quiet", "pm2-node.service"],
+                      timeout=5).returncode == 0:
         env = os.environ.copy()
         env["PM2_HOME"] = "/home/node/.pm2"
         env["PATH"] = "/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"
         try:
-            subprocess.run(["systemctl", "reload","pm2-node.service"])
-            subprocess.run(["su", "-s","/bin/sh", "-c", "pm2 reload /opt/tklweb-cp/ecosystem.config.js", "node"], check=True, env=env)
-            subprocess.run(["su", "-s","/bin/sh", "-c", "pm2 save", "node"], check=True, env=env)
-            subprocess.run(["service", "pm2-node", "restart"])
-        except:
+            subprocess.run(["systemctl", "reload","pm2-node.service"], timeout=10)
+            subprocess.run(["su", "-s","/bin/sh", "-c", "pm2 reload /opt/tklweb-cp/ecosystem.config.js", "node"], 
+                         check=True, env=env, timeout=30)
+            subprocess.run(["su", "-s","/bin/sh", "-c", "pm2 save", "node"], 
+                         check=True, env=env, timeout=15)
+            subprocess.run(["service", "pm2-node", "restart"], timeout=30)
+        except (subprocess.TimeoutExpired, subprocess.CalledProcessError) as e:
+            # Log specific error but continue
+            print(f"Warning: PM2 restart failed: {e}", file=sys.stderr)
             pass
 
 
