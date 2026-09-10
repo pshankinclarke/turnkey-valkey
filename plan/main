@@ -1,3 +1,7 @@
 #include <turnkey/base>
 #include <turnkey/nodejs-nginx>
+
 valkey-server
+valkey-tools
+nodejs
+npm
