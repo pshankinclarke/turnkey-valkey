@@ -14,7 +14,6 @@ Option:
 import sys
 import getopt
 import subprocess
-import os
 
 from netinfo import get_ifnames, InterfaceInfo
 from libinithooks.dialog_wrapper import Dialog
@@ -81,7 +80,7 @@ def main():
         d = Dialog('TurnKey Linux - First boot configuration')
         protected_mode = d.yesno(
                 'Keep protected-mode enabled?',
-                "In protected  mode Valkey only replies to queries from"
+                "In protected mode Valkey only replies to queries from"
                 " localhost. Clients connecting from other addresses will"
                 " receive an error, noting why & how to configure Valkey.\n"
                 "\nUnless you set really good password, this is recommended",
@@ -101,25 +100,28 @@ def main():
         f"s|HTTP_PASSWORD\": \".*\"|HTTP_PASSWORD\": \"{password}\"|",
         redis_commander_conf])
 
-    # restart valkey and redis commander if running so change takes effect
-    if subprocess.run(["systemctl", "is-active",
-                       "--quiet", "valkey-server.service"]).returncode == 0:
-        subprocess.run(["service", "valkey-server", "restart"])
+    # restart Valkey and Redis Commander if running so change takes effect
+    if subprocess.run(["systemctl", "is-active", "--quiet",
+                       "valkey-server.service"]).returncode == 0:
+        subprocess.run(["service", "valkey-server", "restart"], check=True)
 
     # reload and restart pm2 so changes take affect
     # and save them to /home/node/.pm2/dump.pm2
-    if subprocess.run(["systemctl", "is-active",
-                       "--quiet", "pm2-node.service"]).returncode == 0:
-        env = os.environ.copy()
-        env["PM2_HOME"] = "/home/node/.pm2"
-        env["PATH"] = "/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"
-        try:
-            subprocess.run(["systemctl", "reload","pm2-node.service"])
-            subprocess.run(["su", "-s","/bin/sh", "-c", "pm2 reload /opt/tklweb-cp/ecosystem.config.js", "node"], check=True, env=env)
-            subprocess.run(["su", "-s","/bin/sh", "-c", "pm2 save", "node"], check=True, env=env)
-            subprocess.run(["service", "pm2-node", "restart"])
-        except:
-            pass
+    if subprocess.run(["systemctl", "is-active", "--quiet",
+                       "pm2-node.service"]).returncode == 0:
+        environment = [
+            "env", "PM2_HOME=/home/node/.pm2",
+            "PATH=/usr/local/bin:/usr/bin:/bin",
+        ]
+        subprocess.run([
+            "runuser", "--user", "node", "--", *environment,
+            "pm2", "reload", "/opt/tklweb-cp/ecosystem.config.js",
+        ], check=True)
+        subprocess.run([
+            "runuser", "--user", "node", "--", *environment,
+            "pm2", "save",
+        ], check=True)
+        subprocess.run(["service", "pm2-node", "restart"], check=True)
 
 
 if __name__ == "__main__":
